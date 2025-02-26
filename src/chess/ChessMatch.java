@@ -1,5 +1,6 @@
 package chess;
 
+import java.awt.Color;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -21,6 +22,7 @@ public class ChessMatch {
 	private Board board;
 	private boolean check, checkMate;
 	private ChessPiece enPassantVunerable;
+	private ChessPiece promoted;
 
 	private List<Piece> piecesOnTheBoard = new ArrayList<>();
 	private List<Piece> capturedPieces = new ArrayList<>();
@@ -52,6 +54,10 @@ public class ChessMatch {
 		return enPassantVunerable;
 	}
 
+	public ChessPiece getPromoted(){
+		return promoted;
+	}
+
 	public ChessPiece[][] getPieces() {
 		ChessPiece[][] mat = new ChessPiece[board.getRows()][board.getColumns()];
 
@@ -81,12 +87,37 @@ public class ChessMatch {
 			throw new ChessException("You can't put yourself in check!");
 		}
 
+		ChessPiece movedPiece = (ChessPiece)board.piece(target);
+
+		// special move promotion
+		promoted = null;
+		if(movedPiece instanceof Pawn){
+			if((movedPiece.getColor() == Color.WHITE && movedPiece.getRow(target) == 0) || (movedPiece.getColor() == Color.BLACK && movedPiece.getRow(target) == 7)){
+				promoted = (ChessPiece)board.piece(target);
+			}
+		}
 		check = (testCheck(opponent(currentPlayer))) ? true : false;
 
 		if (testCheckMate(opponent(currentPlayer))) {
 			checkMate = true;
 		} else {
 			nextTurn();
+		}
+
+		//special move en passant
+		if(movedPiece instanceof Pawn){
+			if(source.getColumn() != target.getColumn() && capturedPiece == null){
+				Position pawnPosition;
+				if (p.getColor() == Color.WHITE){
+					pawnPosition = new Position(target.getRow() + 1, target.getColumn());
+				}
+				else {
+					pawnPosition = new Position(target.getRow() - 1, target.getColumn());
+				}
+				capturedPiece = board.removePiece(pawnPosition);
+				capturedPieces.add(capturedPiece);
+				piecesOnTheBoard.remove(capturedPiece);
+			}
 		}
 
 		return (ChessPiece) capturedPiece;
@@ -133,22 +164,6 @@ public class ChessMatch {
 			ChessPiece rook = (ChessPiece)board.removePiece(sourceT);
 			board.placePiece(rook, targetT);
 			rook.increaseMoveCount();
-		}
-
-		//special move en passant
-		if(p instanceof Pawn){
-			if(source.getColumn() != target.getColumn() && capturedPiece == null){
-				Position pawnPosition;
-				if (p.getColor() == Color.WHITE){
-					pawnPosition = new Position(target.getRow() + 1, target.getColumn());
-				}
-				else {
-					pawnPosition = new Position(target.getRow() - 1, target.getColumn());
-				}
-				capturedPiece = board.removePiece(pawnPosition);
-				capturedPieces.add(capturedPiece);
-				piecesOnTheBoard.remove(capturedPiece);
-			}
 		}
 
 		return capturedPiece;
